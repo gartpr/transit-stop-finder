@@ -1,5 +1,24 @@
-// src/components/TransitFinder.js
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Box, 
+  Container, 
+  VStack, 
+  HStack, 
+  Heading, 
+  Text, 
+  Input, 
+  Button, 
+  Alert, 
+  Grid, 
+  Badge, 
+  Icon, 
+  Flex, 
+  Spinner,
+  Card,
+  InputGroup,
+  IconButton,
+  Separator
+} from '@chakra-ui/react';
 import { MapPin, Navigation, Search, Bus, Train, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import GoogleMapsService from '../services/googleMapsService';
 import TransitlandService from '../services/transitlandService';
@@ -27,11 +46,7 @@ const TransitFinder = () => {
   useEffect(() => {
     const warnings = validateApiKeys();
     setApiWarnings(warnings);
-    
-    // In your real app, this would check for the actual API key
-    // if (API_CONFIG.GOOGLE_MAPS_API_KEY) {
-      initializeGoogleMaps();
-    // }
+    initializeGoogleMaps();
   }, []);
 
   const initializeGoogleMaps = async () => {
@@ -213,212 +228,257 @@ const TransitFinder = () => {
   const getTransitIcon = (type) => {
     switch (type) {
       case 'bus':
-        return <Bus className="w-4 h-4" />;
+        return Bus;
       case 'train':
-        return <Train className="w-4 h-4" />;
+        return Train;
       default:
-        return <MapPin className="w-4 h-4" />;
+        return MapPin;
     }
   };
 
-  const getTransitColor = (type) => {
+  const getTransitColorScheme = (type) => {
     switch (type) {
       case 'bus':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'blue';
       case 'train':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'green';
       default:
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'purple';
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Navigation className="w-8 h-8" />
-              Public Transit Finder
-            </h1>
-            <p className="mt-2 opacity-90">Find the closest bus stops, train stations, and transit options near you</p>
-          </div>
+    <Container maxW="6xl" p={4}>
+      <Card.Root bg="white" shadow="xl" borderRadius="2xl" overflow="hidden">
+        {/* Header */}
+        <Box bgGradient="to-r" gradientFrom="blue.600" gradientTo="indigo.600" p={6} color="white">
+          <HStack gap={3} mb={2}>
+            <Icon>
+              <Navigation />
+            </Icon>
+            <Heading size="xl">Public Transit Finder</Heading>
+          </HStack>
+          <Text opacity={0.9}>Find the closest bus stops, train stations, and transit options near you</Text>
+        </Box>
 
-          <div className="p-6">
+        <Card.Body p={6}>
+          <VStack gap={6} align="stretch">
             {/* API Warnings */}
             {apiWarnings.length > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold text-yellow-800 mb-2">Setup Required</h3>
-                    <ul className="text-yellow-700 text-sm space-y-1">
-                      {apiWarnings.map((warning, index) => (
-                        <li key={index}>• {warning}</li>
-                      ))}
-                    </ul>
-                    <p className="text-yellow-700 text-sm mt-2">
-                      Currently running in demo mode with simulated API responses.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <Alert.Root status="warning" borderRadius="lg">
+                <Alert.Indicator />
+                <Box>
+                  <Alert.Title mb={2}>Setup Required</Alert.Title>
+                  <VStack align="start" gap={1}>
+                    {apiWarnings.map((warning, index) => (
+                      <Text key={index} fontSize="sm">• {warning}</Text>
+                    ))}
+                  </VStack>
+                  <Text fontSize="sm" mt={2}>
+                    Currently running in demo mode with simulated API responses.
+                  </Text>
+                </Box>
+              </Alert.Root>
             )}
 
             {/* Search Section */}
-            <div className="mb-6">
-              <div className="flex gap-3 mb-4">
-                <div className="flex-1">
-                  <input
-                    type="text"
+            <VStack gap={3} align="stretch">
+              <HStack gap={3}>
+                <InputGroup flex={1}>
+                  <Input
                     placeholder="Enter an address or location..."
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddressSearch()}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    size="lg"
                   />
-                </div>
-                <button
+                </InputGroup>
+                <Button
                   onClick={handleAddressSearch}
-                  disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
+                  loading={loading}
+                  colorPalette="blue"
+                  size="lg"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  <Search />
                   Search
-                </button>
-              </div>
+                </Button>
+              </HStack>
               
-              <button
+              <Button
+                variant="ghost"
+                colorPalette="blue"
                 onClick={handleUseCurrentLocation}
                 disabled={loading}
-                className="text-blue-600 hover:text-blue-800 flex items-center gap-2 disabled:opacity-50 transition-colors"
+                size="sm"
               >
-                <MapPin className="w-4 h-4" />
+                <MapPin />
                 Use my current location
-              </button>
-            </div>
+              </Button>
+            </VStack>
 
             {/* Map */}
-            <div className="mb-6">
-              <div 
-                ref={mapRef}
-                className="w-full h-96 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border flex items-center justify-center"
-                style={{ minHeight: '400px' }}
-              >
-                <div className="text-center text-gray-500">
-                  <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">Interactive Map</p>
-                  <p className="text-sm">Google Maps integration ready</p>
-                  {markerLocation && (
-                    <div className="mt-3 text-blue-600">
-                      <p className="text-sm font-medium">Search Location:</p>
-                      <p className="text-xs">{markerLocation.lat.toFixed(4)}, {markerLocation.lng.toFixed(4)}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <Box
+              ref={mapRef}
+              h="400px"
+              bgGradient="to-br"
+              gradientFrom="gray.100"
+              gradientTo="gray.200"
+              borderRadius="lg"
+              borderWidth="1px"
+              borderColor="gray.200"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <VStack gap={3} color="gray.500">
+                <Icon size="xl" opacity={0.5}>
+                  <MapPin />
+                </Icon>
+                <Text fontWeight="medium">Interactive Map</Text>
+                <Text fontSize="sm">Google Maps integration ready</Text>
+                {markerLocation && (
+                  <Box mt={3} color="blue.600" textAlign="center">
+                    <Text fontSize="sm" fontWeight="medium">Search Location:</Text>
+                    <Text fontSize="xs">{markerLocation.lat.toFixed(4)}, {markerLocation.lng.toFixed(4)}</Text>
+                  </Box>
+                )}
+              </VStack>
+            </Box>
 
             {/* Loading State */}
             {loading && (
-              <div className="text-center py-8">
-                <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto" />
-                <p className="mt-4 text-gray-600">Finding nearby transit stops...</p>
-                <div className="mt-2 text-sm text-gray-500">
+              <VStack py={8} gap={4}>
+                <Spinner size="xl" color="blue.600" borderWidth="4px" />
+                <Text color="gray.600">Finding nearby transit stops...</Text>
+                <Text fontSize="sm" color="gray.500">
                   Searching Google Places, Transitland, and OpenStreetMap...
-                </div>
-              </div>
+                </Text>
+              </VStack>
             )}
 
             {/* Error State */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                  <p className="text-red-800">{error}</p>
-                </div>
-              </div>
+              <Alert.Root status="error" borderRadius="lg">
+                <Alert.Indicator />
+                <Text>{error}</Text>
+              </Alert.Root>
             )}
 
             {/* Results */}
             {transitStops.length > 0 && !loading && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              <VStack gap={4} align="stretch">
+                <Heading size="lg" color="gray.800">
                   Nearby Transit Stops ({transitStops.length} found)
-                </h2>
+                </Heading>
                 
-                <div className="grid gap-4 md:grid-cols-2">
+                <Grid columns={{ base: 1, md: 2 }} gap={4}>
                   {transitStops.map((stop) => (
-                    <div
+                    <Card.Root
                       key={stop.id}
-                      className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all duration-200 hover:border-blue-200"
+                      variant="outline"
+                      _hover={{ shadow: "lg", borderColor: "blue.200" }}
+                      transition="all 0.2s"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg border ${getTransitColor(stop.type)}`}>
-                            {getTransitIcon(stop.type)}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-800">{stop.name}</h3>
-                            <p className="text-sm text-gray-600">{stop.address}</p>
-                            {stop.rating && (
-                              <p className="text-sm text-yellow-600 flex items-center gap-1 mt-1">
-                                <span>★</span> 
-                                <span>{stop.rating.toFixed(1)}</span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-blue-600">{formatDistance(stop.distance)}</p>
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
-                            <Clock className="w-3 h-3" />
-                            {stop.walkTime} min walk
-                          </div>
-                          <p className="text-xs text-gray-400 capitalize mt-1">{stop.source}</p>
-                        </div>
-                      </div>
-                      
-                      {stop.routes && stop.routes.length > 0 && (
-                        <div className="border-t pt-3">
-                          <p className="text-sm text-gray-600 mb-2">Available Routes:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {stop.routes.map((route, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                              >
-                                {route}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="mt-4 pt-3 border-t">
-                        <button className="w-full bg-blue-50 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
-                          Get Directions
-                        </button>
-                      </div>
-                    </div>
+                      <Card.Body p={5}>
+                        <Flex justify="space-between" mb={3}>
+                          <HStack gap={3} align="start">
+                            <Box
+                              p={2}
+                              borderRadius="lg"
+                              bg={`${getTransitColorScheme(stop.type)}.100`}
+                              color={`${getTransitColorScheme(stop.type)}.800`}
+                              borderWidth="1px"
+                              borderColor={`${getTransitColorScheme(stop.type)}.200`}
+                            >
+                              <Icon>
+                                {getTransitIcon(stop.type) === Bus ? <Bus /> : 
+                                 getTransitIcon(stop.type) === Train ? <Train /> : <MapPin />}
+                              </Icon>
+                            </Box>
+                            <Box>
+                              <Text fontWeight="semibold" color="gray.800">{stop.name}</Text>
+                              <Text fontSize="sm" color="gray.600">{stop.address}</Text>
+                              {stop.rating && (
+                                <HStack gap={1} mt={1}>
+                                  <Text color="yellow.600" fontSize="sm">★</Text>
+                                  <Text color="yellow.600" fontSize="sm">{stop.rating.toFixed(1)}</Text>
+                                </HStack>
+                              )}
+                            </Box>
+                          </HStack>
+                          <VStack align="end" gap={0}>
+                            <Text fontSize="lg" fontWeight="bold" color="blue.600">
+                              {formatDistance(stop.distance)}
+                            </Text>
+                            <HStack gap={1}>
+                              <Icon size="sm" color="gray.500">
+                                <Clock />
+                              </Icon>
+                              <Text fontSize="sm" color="gray.500">{stop.walkTime} min walk</Text>
+                            </HStack>
+                            <Text fontSize="xs" color="gray.400" textTransform="capitalize" mt={1}>
+                              {stop.source}
+                            </Text>
+                          </VStack>
+                        </Flex>
+                        
+                        {stop.routes && stop.routes.length > 0 && (
+                          <>
+                            <Separator my={3} />
+                            <Box>
+                              <Text fontSize="sm" color="gray.600" mb={2}>Available Routes:</Text>
+                              <Flex wrap="wrap" gap={2}>
+                                {stop.routes.map((route, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="subtle"
+                                    colorPalette="gray"
+                                    borderRadius="full"
+                                    px={2}
+                                    py={1}
+                                    fontSize="xs"
+                                  >
+                                    {route}
+                                  </Badge>
+                                ))}
+                              </Flex>
+                            </Box>
+                          </>
+                        )}
+                        
+                        <Box mt={4} pt={3} borderTopWidth="1px">
+                          <Button
+                            colorPalette="blue"
+                            variant="ghost"
+                            size="sm"
+                            width="full"
+                          >
+                            Get Directions
+                          </Button>
+                        </Box>
+                      </Card.Body>
+                    </Card.Root>
                   ))}
-                </div>
-              </div>
+                </Grid>
+              </VStack>
             )}
 
             {/* Empty State */}
             {transitStops.length === 0 && !loading && !error && (
-              <div className="text-center py-12 text-gray-500">
-                <Navigation className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                <h3 className="text-lg font-medium mb-2">Ready to Find Transit</h3>
-                <p className="text-sm">Search for an address or use your current location to find nearby transit stops.</p>
-              </div>
+              <VStack py={12} gap={4} color="gray.500">
+                <Icon size="2xl" opacity={0.3}>
+                  <Navigation />
+                </Icon>
+                <VStack gap={2}>
+                  <Text fontSize="lg" fontWeight="medium">Ready to Find Transit</Text>
+                  <Text fontSize="sm">Search for an address or use your current location to find nearby transit stops.</Text>
+                </VStack>
+              </VStack>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </VStack>
+        </Card.Body>
+      </Card.Root>
+    </Container>
   );
 };
 
