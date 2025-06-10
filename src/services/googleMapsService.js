@@ -6,33 +6,59 @@ class GoogleMapsService {
     this.map = null;
     this.placesService = null;
     this.geocoder = null;
+    this.isLoading = false;
     this.isLoaded = false;
   }
 
   // Load Google Maps script
-  async loadGoogleMaps() {
-    if (this.isLoaded || window.google) {
-      return Promise.resolve();
-    }
-
+  loadGoogleMaps = () => {
     return new Promise((resolve, reject) => {
+      // If already loaded, resolve immediately
+      if (this.isLoaded && window.google?.maps) {
+        resolve();
+        return;
+      }
+
+      // If currently loading, wait for it to complete
+      if (this.isLoading) {
+        const checkLoaded = setInterval(() => {
+          if (this.isLoaded && window.google?.maps) {
+            clearInterval(checkLoaded);
+            resolve();
+          }
+        }, 100);
+        return;
+      }
+
+      this.isLoading = true;
+
+      // Check if Google Maps is already loaded
+      if (window.google && window.google.maps) {
+        this.isLoaded = true;
+        this.isLoading = false;
+        resolve();
+        return;
+      }
+
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${API_CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places,geometry`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${API_CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places,geometry&loading=async`;
       script.async = true;
       script.defer = true;
       
       script.onload = () => {
         this.isLoaded = true;
+        this.isLoading = false;
         resolve();
       };
       
       script.onerror = () => {
-        reject(new Error('Failed to load Google Maps API'));
+        this.isLoading = false;
+        reject(new Error('Failed to load Google Maps'));
       };
       
       document.head.appendChild(script);
     });
-  }
+  };
 
   // Initialize map
   initializeMap(mapElement, options = {}) {
@@ -135,13 +161,39 @@ class GoogleMapsService {
   }
 
   // Create marker
-  createMarker(position, options = {}) {
-    return new window.google.maps.Marker({
-      position,
-      map: this.map,
-      ...options
-    });
-  }
+  createMarker = (position, options = {}) => {
+    if (!this.map) return null;
+
+    // Check if AdvancedMarkerElement is available
+    if (window.google.maps.marker?.AdvancedMarkerElement) {
+      const markerOptions = {
+        map: this.map,
+        position: position,
+        title: options.title || ''
+      };
+
+      // Create custom content if icon is provided
+      if (options.icon) {
+        const img = document.createElement('img');
+        img.src = options.icon.url || options.icon;
+        if (options.icon.scaledSize) {
+          img.width = options.icon.scaledSize.width;
+          img.height = options.icon.scaledSize.height;
+        }
+        markerOptions.content = img;
+      }
+
+      return new window.google.maps.marker.AdvancedMarkerElement(markerOptions);
+    } else {
+      // Fallback to regular Marker
+      return new window.google.maps.Marker({
+        position: position,
+        map: this.map,
+        title: options.title || '',
+        icon: options.icon || undefined
+      });
+    }
+  };
 
   // Fit map to show all markers
   fitBounds(locations) {
