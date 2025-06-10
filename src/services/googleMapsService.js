@@ -1,66 +1,27 @@
-// src/services/googleMapsService.js
+import { Loader } from '@googlemaps/js-api-loader';
 import { API_CONFIG } from '../config/apiKeys';
+
+const loader = new Loader({
+  apiKey: API_CONFIG.GOOGLE_MAPS_API_KEY,
+  version: 'weekly',
+  libraries: ['places', 'geometry']
+});
 
 class GoogleMapsService {
   constructor() {
     this.map = null;
     this.placesService = null;
     this.geocoder = null;
-    this.isLoading = false;
-    this.isLoaded = false;
   }
 
-  // Load Google Maps script
   loadGoogleMaps = () => {
-    return new Promise((resolve, reject) => {
-      // If already loaded, resolve immediately
-      if (this.isLoaded && window.google?.maps) {
-        resolve();
-        return;
+    return loader.load().then(() => {
+      if (!window.google?.maps?.Map) {
+        throw new Error('Google Maps API failed to load.');
       }
-
-      // If currently loading, wait for it to complete
-      if (this.isLoading) {
-        const checkLoaded = setInterval(() => {
-          if (this.isLoaded && window.google?.maps) {
-            clearInterval(checkLoaded);
-            resolve();
-          }
-        }, 100);
-        return;
-      }
-
-      this.isLoading = true;
-
-      // Check if Google Maps is already loaded
-      if (window.google && window.google.maps) {
-        this.isLoaded = true;
-        this.isLoading = false;
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${API_CONFIG.GOOGLE_MAPS_API_KEY}&libraries=places,geometry&loading=async`;
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        this.isLoaded = true;
-        this.isLoading = false;
-        resolve();
-      };
-      
-      script.onerror = () => {
-        this.isLoading = false;
-        reject(new Error('Failed to load Google Maps'));
-      };
-      
-      document.head.appendChild(script);
     });
   };
 
-  // Initialize map
   initializeMap(mapElement, options = {}) {
     const defaultOptions = {
       center: { lat: 37.7749, lng: -122.4194 },
@@ -77,11 +38,10 @@ class GoogleMapsService {
     this.map = new window.google.maps.Map(mapElement, { ...defaultOptions, ...options });
     this.placesService = new window.google.maps.places.PlacesService(this.map);
     this.geocoder = new window.google.maps.Geocoder();
-    
+
     return this.map;
   }
 
-  // Geocode address
   async geocodeAddress(address) {
     return new Promise((resolve, reject) => {
       if (!this.geocoder) {
@@ -103,7 +63,6 @@ class GoogleMapsService {
     });
   }
 
-  // Find nearby transit stops
   async findNearbyTransit(location, radius = API_CONFIG.DEFAULT_SEARCH_RADIUS) {
     return new Promise((resolve, reject) => {
       if (!this.placesService) {
@@ -140,7 +99,6 @@ class GoogleMapsService {
     });
   }
 
-  // Determine transit type from Google Places types
   determineTransitType(types) {
     if (types.includes('subway_station')) return 'train';
     if (types.includes('bus_station')) return 'bus';
@@ -148,7 +106,6 @@ class GoogleMapsService {
     return 'transit';
   }
 
-  // Calculate distance between two points
   calculateDistance(pos1, pos2) {
     if (window.google && window.google.maps) {
       const distance = window.google.maps.geometry.spherical.computeDistanceBetween(
@@ -160,11 +117,9 @@ class GoogleMapsService {
     return 0;
   }
 
-  // Create marker
   createMarker = (position, options = {}) => {
     if (!this.map) return null;
 
-    // Check if AdvancedMarkerElement is available
     if (window.google.maps.marker?.AdvancedMarkerElement) {
       const markerOptions = {
         map: this.map,
@@ -172,7 +127,6 @@ class GoogleMapsService {
         title: options.title || ''
       };
 
-      // Create custom content if icon is provided
       if (options.icon) {
         const img = document.createElement('img');
         img.src = options.icon.url || options.icon;
@@ -185,7 +139,6 @@ class GoogleMapsService {
 
       return new window.google.maps.marker.AdvancedMarkerElement(markerOptions);
     } else {
-      // Fallback to regular Marker
       return new window.google.maps.Marker({
         position: position,
         map: this.map,
@@ -195,10 +148,9 @@ class GoogleMapsService {
     }
   };
 
-  // Fit map to show all markers
   fitBounds(locations) {
     if (!this.map || locations.length === 0) return;
-    
+
     const bounds = new window.google.maps.LatLngBounds();
     locations.forEach(location => bounds.extend(location));
     this.map.fitBounds(bounds);

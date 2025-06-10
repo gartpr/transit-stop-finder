@@ -1,3 +1,4 @@
+//StopCard.js
 import React from 'react';
 import {
   Card,
@@ -20,8 +21,7 @@ const TransitStopCard = ({
   isSelected, 
   isReachable, 
   showIsochrone,
-  onStopClick,
-  onGetDirections 
+  onStopClick
 }) => {
   const getIcon = () => {
     switch (stop.type) {
@@ -34,7 +34,7 @@ const TransitStopCard = ({
   const getColorScheme = () => {
     if (isSelected) return 'red';
     if (isReachable) return 'orange';
-    return getTransitColorScheme(stop.type);
+    return stop.type === 'bus' ? 'green' : stop.type === 'train' ? 'teal' : 'purple';
   };
 
   return (
@@ -42,7 +42,7 @@ const TransitStopCard = ({
       variant="outline"
       borderColor={isSelected ? "red.500" : isReachable ? "orange.500" : "gray.200"}
       borderWidth={isSelected || isReachable ? "2px" : "1px"}
-      _hover={{ shadow: "lg", borderColor: "blue.200" }}
+      _hover={{ shadow: "lg", borderColor: "green.300" }}
       transition="all 0.2s"
       cursor="pointer"
       onClick={() => !showIsochrone && onStopClick(stop)}
@@ -63,7 +63,7 @@ const TransitStopCard = ({
             <Box>
               <Text fontWeight="semibold" color="gray.800">
                 {stop.name}
-                {isSelected && <Badge ml={2} colorPalette="red" size="sm">Origin</Badge>}
+                {isSelected && <Badge ml={2} colorScheme="red" size="sm">Origin</Badge>}
               </Text>
               <Text fontSize="sm" color="gray.600">{stop.address}</Text>
               {stop.rating && (
@@ -77,7 +77,7 @@ const TransitStopCard = ({
           <VStack align="end" gap={0}>
             {stop.distance !== undefined && (
               <>
-                <Text fontSize="lg" fontWeight="bold" color="blue.600">
+                <Text fontSize="lg" fontWeight="bold" color="green.600">
                   {formatDistance(stop.distance)}
                 </Text>
                 <HStack gap={1}>
@@ -104,7 +104,7 @@ const TransitStopCard = ({
                   <Badge
                     key={index}
                     variant="subtle"
-                    colorPalette="gray"
+                    colorScheme="gray"
                     borderRadius="full"
                     px={2}
                     py={1}
@@ -117,53 +117,26 @@ const TransitStopCard = ({
             </Box>
           </>
         )}
-        
-        <Box mt={4} pt={3} borderTopWidth="1px">
-          {!showIsochrone ? (
-            <HStack gap={2}>
-              <Button
-                colorPalette="blue"
-                variant="ghost"
-                size="sm"
-                flex={1}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onGetDirections(stop);
-                }}
-              >
-                Get Directions
-              </Button>
-              <Button
-                colorPalette="purple"
-                variant="ghost"
-                size="sm"
-                flex={1}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStopClick(stop);
-                }}
-              >
-                <Icon size="sm">
-                  <Route />
-                </Icon>
-                Reachable Stops
-              </Button>
-            </HStack>
-          ) : (
+
+        {!showIsochrone && (
+          <Box mt={4} pt={3} borderTopWidth="1px">
             <Button
-              colorPalette="blue"
+              colorScheme="teal"
               variant="ghost"
               size="sm"
               width="full"
               onClick={(e) => {
                 e.stopPropagation();
-                onGetDirections(stop);
+                onStopClick(stop);
               }}
             >
-              Get Directions
+              <Icon size="sm">
+                <Route />
+              </Icon>
+              Reachable Stops
             </Button>
-          )}
-        </Box>
+          </Box>
+        )}
       </Card.Body>
     </Card.Root>
   );

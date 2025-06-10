@@ -24,28 +24,14 @@ export const formatDistance = (miles) => {
   return `${miles.toFixed(1)} mi`;
 };
 
-export const getUserLocation = () => {
-  return new Promise((resolve, reject) => {
+export const getUserLocation = () =>
+  new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      reject(new Error('Geolocation is not supported'));
+      reject(new Error('Geolocation not supported'));
       return;
     }
-
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      },
-      (error) => {
-        reject(error);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => reject(err)
     );
   });
-};

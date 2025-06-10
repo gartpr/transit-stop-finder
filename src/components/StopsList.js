@@ -1,28 +1,29 @@
+// src/components/StopsList.js
 import React from 'react';
-import { VStack, Heading, Grid } from '@chakra-ui/react';
+import { VStack, Heading, SimpleGrid } from '@chakra-ui/react';
 import TransitStopCard from './StopCard';
 
-const TransitStopsList = ({ 
-  transitStops, 
-  selectedStop, 
-  reachableStops, 
+const TransitStopsList = ({
+  transitStops,
+  selectedStop,
+  reachableStops,
   showIsochrone,
   onStopClick,
-  onGetDirections 
+  onGetDirections
 }) => {
-  const stopsToShow = showIsochrone 
+  const stopsToShow = showIsochrone
     ? [selectedStop, ...reachableStops].filter(Boolean)
     : transitStops;
 
   return (
     <VStack gap={4} align="stretch">
       <Heading size="lg" color="gray.800">
-        {showIsochrone 
+        {showIsochrone
           ? `Reachable from ${selectedStop?.name} (${reachableStops.length + 1} stops)`
           : `Nearby Transit Stops (${transitStops.length} found)`}
       </Heading>
-      
-      <Grid columns={{ base: 1, md: 2 }} gap={4}>
+
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
         {stopsToShow.map((stop) => (
           <TransitStopCard
             key={stop.id}
@@ -34,7 +35,7 @@ const TransitStopsList = ({
             onGetDirections={onGetDirections}
           />
         ))}
-      </Grid>
+      </SimpleGrid>
     </VStack>
   );
 };

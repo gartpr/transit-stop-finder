@@ -1,73 +1,59 @@
 import GoogleMapsService from '../services/googleMapsService';
 import { calculateWalkingTime } from './helpers';
 
-// Map-related helper functions
+// Clear all markers from the map
 export const clearMapMarkers = (markers, markersRef) => {
-  console.log('Clearing', markersRef.current.length, 'markers');
-  if (markersRef.current && markersRef.current.length > 0) {
+  if (markersRef.current?.length) {
     markersRef.current.forEach(marker => {
-      if (marker && marker.setMap) {
-        try {
-          marker.setMap(null);
-        } catch (error) {
-          console.error('Error clearing marker:', error);
-        }
+      try {
+        marker.setMap(null);
+      } catch (error) {
+        console.error('Error clearing marker:', error);
       }
     });
     markersRef.current = [];
   }
 };
 
+// Get appropriate icon for a stop
 export const getMarkerIcon = (stop, selectedStop, reachableStops, showIsochrone) => {
   const isSelected = selectedStop?.id === stop.id;
   const isReachable = reachableStops.some(s => s.id === stop.id);
-  
-  if (isSelected) {
-    return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
-  } else if (showIsochrone && isReachable) {
-    return 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
-  } else {
-    const color = stop.type === 'bus' ? 'blue' : stop.type === 'train' ? 'green' : 'purple';
-    return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
-  }
+
+  if (isSelected) return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+  if (showIsochrone && isReachable) return 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+
+  const color = stop.type === 'bus' ? 'blue' : stop.type === 'train' ? 'green' : 'purple';
+  return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
 };
 
+// Get icon name for UI (lucide-react)
 export const getTransitIcon = (type) => {
-  switch (type) {
-    case 'bus':
-      return 'Bus';
-    case 'train':
-      return 'Train';
-    default:
-      return 'MapPin';
-  }
+  if (type === 'bus') return 'Bus';
+  if (type === 'train') return 'Train';
+  return 'MapPin';
 };
 
+// Get Chakra color scheme for a given transit type
 export const getTransitColorScheme = (type) => {
-  switch (type) {
-    case 'bus':
-      return 'blue';
-    case 'train':
-      return 'green';
-    default:
-      return 'purple';
-  }
+  return type === 'bus' ? 'blue' : type === 'train' ? 'green' : 'purple';
 };
 
+// Determine which stops are reachable from the selected stop
 export const calculateIsochroneStops = (stops, selectedStop, isochroneTime) => {
-  const averageSpeed = selectedStop.type === 'train' ? 40 : 25;
-  
+  const avgSpeed = selectedStop.type === 'train' ? 40 : 25;
+
   return stops
     .filter(stop => stop.id !== selectedStop.id)
     .map(stop => {
       const distance = GoogleMapsService.calculateDistance(selectedStop.location, stop.location);
-      const travelTime = (distance / 1000) / averageSpeed * 60;
+      const travelTime = (distance / 1000 / avgSpeed) * 60;
       const walkTime = calculateWalkingTime(distance);
       const totalTime = travelTime + walkTime;
-      
+
       return {
         ...stop,
-        distance: distance,
+        distance,
         walkTime: Math.round(totalTime),
         isReachable: totalTime <= parseInt(isochroneTime)
       };

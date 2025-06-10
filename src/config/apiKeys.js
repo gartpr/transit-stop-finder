@@ -1,4 +1,4 @@
-// src/config/apiKeys.js
+//apiKeys.js
 export const API_CONFIG = {
   GOOGLE_MAPS_API_KEY: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
   
