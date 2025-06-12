@@ -1,6 +1,7 @@
-//apiKeys.js
+// src/config/apiKeys.js
 export const API_CONFIG = {
   GOOGLE_MAPS_API_KEY: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+  TRANSITLAND_API_KEY: process.env.REACT_APP_TRANSITLAND_API_KEY,
   
   // Default search radius in meters
   DEFAULT_SEARCH_RADIUS: 2000,
@@ -15,6 +16,10 @@ export const validateApiKeys = () => {
   
   if (!API_CONFIG.GOOGLE_MAPS_API_KEY) {
     warnings.push('Google Maps API key is missing. Please add REACT_APP_GOOGLE_MAPS_API_KEY to your .env file');
+  }
+
+  if (!API_CONFIG.TRANSITLAND_API_KEY) {
+    warnings.push('Transitland API key is missing. Please add REACT_APP_TRANSITLAND_API_KEY to your .env file');
   }
   
   return warnings;

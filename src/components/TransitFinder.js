@@ -1,5 +1,4 @@
-// Updated TransitFinder.js with refactored logic and improved readability
-
+// src/components/TransitFinder.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
@@ -22,6 +21,7 @@ import TransitMap from './Map';
 import TransitStopsList from './StopsList';
 import IsochroneControls from './IsochroneControls';
 import IsochroneDrawer from './IsochroneDrawer';
+import IntroPopup from './IntroPopup';
 
 // Services
 import GoogleMapsService from '../services/googleMapsService';
@@ -29,14 +29,25 @@ import GoogleMapsService from '../services/googleMapsService';
 // Utils
 import {
   calculateWalkingTime,
-  getUserLocation
+  getUserLocation,
+  addMinutesToTime,
+  timeToSeconds,
+  normalizeStopForMap,
+  transitlandToGoogleStop,
+  addMinutesToClock
 } from '../utils/helpers';
 import {
   clearMapMarkers,
   getMarkerIcon,
   calculateIsochroneStops
 } from '../utils/mapHelpers';
+import {
+  findNearestStop,
+  getDepartures,
+  exploreReachableStops
+} from '../services/transitlandService';
 import { API_CONFIG, validateApiKeys } from '../config/apiKeys';
+import { recommendLikelyStopsWithContext } from '../utils/ai';
 
 const TransitFinder = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -54,10 +65,23 @@ const TransitFinder = () => {
   const [isochroneLoading, setIsochroneLoading] = useState(false);
   const [showIsochrone, setShowIsochrone] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [hoveredStopId, setHoveredStopId] = useState(null); //new
+  const [aiRecommendedStops, setAiRecommendedStops] = useState([]);
 
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const userLocationMarkerRef = useRef(null);
+
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+  });
+  const [startTime, setStartTime] = useState('08:00'); // Default morning
+
+  // Show the intro popup only once per session
+  const [showIntro, setShowIntro] = useState(() => {
+    return !window.sessionStorage.getItem('transit_finder_intro_shown');
+  });
 
   useEffect(() => {
     const warnings = validateApiKeys();
@@ -65,10 +89,25 @@ const TransitFinder = () => {
     if (!mapInitialized) initializeGoogleMaps();
   }, [mapInitialized]);
 
+  useEffect(() => {
+    if (showIsochrone && selectedStop) {
+      addMarkersToMap([selectedStop, ...reachableStops], selectedStop.location);
+    } else {
+      addMarkersToMap(transitStops, markerLocation);
+    }
+  }, [showIsochrone, selectedStop, reachableStops, transitStops, markerLocation]);
+
   useEffect(() => () => {
     clearMapMarkers([], markersRef);
     userLocationMarkerRef.current?.setMap?.(null);
   }, []);
+
+  useEffect(() => {
+    if (!showIntro) {
+      window.sessionStorage.setItem('transit_finder_intro_shown', 'yes');
+    }
+  }, [showIntro]);
+
 
   const initializeGoogleMaps = async () => {
     try {
@@ -149,6 +188,12 @@ const TransitFinder = () => {
         walkTime: calculateWalkingTime(s.distance)
       })).sort((a, b) => a.distance - b.distance).slice(0, API_CONFIG.MAX_RESULTS);
 
+      if (enrichedStops.length === 0) {
+        setError('No transit stops found near this location.');
+        setTransitStops([]);
+        return;
+      }
+
       setTransitStops(enrichedStops);
       addMarkersToMap(enrichedStops, location);
     } catch (err) {
@@ -164,21 +209,28 @@ const TransitFinder = () => {
     clearMapMarkers([], markersRef);
     const markers = [];
 
-    if (!showIsochrone && centerLocation) {
-      const searchMarker = GoogleMapsService.createMarker(centerLocation, {
-        title: 'Search Location',
+    stops.forEach(stop => {
+      const id = stop.id;
+      const isOrigin = selectedStop && id === selectedStop.id;
+
+      let iconUrl;
+
+      if (showIsochrone) {
+        iconUrl = isOrigin
+          ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          : 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+      } else {
+        iconUrl = getMarkerIcon(stop, selectedStop, [], false);
+      }
+
+      const marker = GoogleMapsService.createMarker(stop.location, {
+        title: stop.name,
         icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#dc2626" width="32" height="32"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'),
+          url: iconUrl,
           scaledSize: { width: 32, height: 32 }
         }
       });
-      if (searchMarker) markers.push(searchMarker);
-    }
 
-    stops.forEach(stop => {
-      if (showIsochrone && selectedStop?.id !== stop.id && !reachableStops.find(s => s.id === stop.id)) return;
-      const iconUrl = getMarkerIcon(stop, selectedStop, reachableStops, showIsochrone);
-      const marker = GoogleMapsService.createMarker(stop.location, { title: stop.name, icon: iconUrl });
       if (marker) {
         marker.addListener('click', () => handleStopClick(stop));
         markers.push(marker);
@@ -191,7 +243,7 @@ const TransitFinder = () => {
     }
   };
 
-  const handleStopClick = (stop) => {
+  const handleStopClick = async (stop) => {
     setSelectedStop(stop);
     setIsDrawerOpen(true);
   };
@@ -209,7 +261,7 @@ const TransitFinder = () => {
       const toAnalyze = nearby.length ? nearby : transitStops;
       const reachable = calculateIsochroneStops(toAnalyze, selectedStop, isochroneTime);
       setReachableStops(reachable);
-      addMarkersToMap([selectedStop, ...reachable], selectedStop.location);
+      addMarkersToMap([selectedStop, ...reachableStops], selectedStop.location, hoveredStopId);
       GoogleMapsService.map?.setCenter(selectedStop.location);
       GoogleMapsService.map?.setZoom(13);
     } catch (err) {
@@ -228,7 +280,80 @@ const TransitFinder = () => {
     if (markerLocation) addMarkersToMap(transitStops, markerLocation);
   };
 
+  const handleTransitlandReachability = async (selectedStop, isochroneMinutes = 30) => {
+    setIsochroneLoading(true);
+    setShowIsochrone(true);
+    setError('');
+
+    try {
+      // 1. Find nearest Transitland stop (get onestop_id, gtfs_id, name)
+      const nearestStops = await findNearestStop(selectedStop.location.lat, selectedStop.location.lng);
+      if (!nearestStops.length) throw new Error('No matching Transitland stop found.');
+      const stop = nearestStops[0];
+
+      // 2. Call new network-based reachability function
+      const reachable = await exploreReachableStops(
+        stop.onestop_id,
+        stop.stop_id,
+        stop.stop_name,
+        isochroneMinutes
+      );
+
+      const mappedReachable = reachable.map(stop => {
+        // Use stop.elapsed_minutes or .walkTime or similar field as travel time
+        const travelMinutes = stop.elapsed_minutes || stop.walkTime || 0;
+        const arrivalTime = addMinutesToClock(startTime, travelMinutes);
+        return {
+          ...transitlandToGoogleStop(stop, selectedStop.location),
+          arrivalTime,
+        };
+      });
+      // Run the AI, then flag the recommended stops in your full list
+      // In TransitFinder.js, after getting your mappedReachable array:
+      const aiRecommended = await recommendLikelyStopsWithContext(mappedReachable);
+
+      // Make a Set of recommended IDs for fast lookup
+      const aiRecommendedSet = new Set(aiRecommended.map(ai =>
+        ai.id || (ai.name + '-' + (ai.location?.lat ?? '') + '-' + (ai.location?.lng ?? ''))
+      ));
+
+      // Merge back into your stops:
+      const stopsWithAI = mappedReachable.map(stop => {
+        const thisStopId = stop.id || (stop.name + '-' + (stop.location?.lat ?? '') + '-' + (stop.location?.lng ?? ''));
+        const aiStop = aiRecommended.find(ai =>
+          (ai.id && ai.id === stop.id) ||
+          (!ai.id && ai.name === stop.name && ai.location?.lat === stop.location?.lat && ai.location?.lng === stop.location?.lng)
+        );
+        return {
+          ...stop,
+          aiRecommended: aiRecommendedSet.has(thisStopId),
+          aiScore: aiStop ? aiStop.aiScore : 0,
+          locationContext: aiStop ? aiStop.locationContext : stop.locationContext,
+        };
+      });
+
+      console.log('AI recommended stops:');
+      aiRecommended.forEach(s => console.log(s.name, s.id, s.location));
+
+      setReachableStops(stopsWithAI);
+      setAiRecommendedStops(aiRecommended); // You can pass this as a prop to StopsList if desired
+
+      addMarkersToMap([selectedStop, ...mappedReachable], selectedStop.location, hoveredStopId);
+      // Add markers to map using reachable (use .lat, .lng, .name, etc)
+      // ... map logic as before, just ensure id/lat/lng/name are present ...
+    } catch (err) {
+      console.error('Transitland reachability error:', err);
+      setError('Failed to calculate reachable stops.');
+      setShowIsochrone(false);
+    } finally {
+      setIsochroneLoading(false);
+    }
+  };
+
+
   return (
+    <>
+    <IntroPopup isOpen={showIntro} onClose={() => setShowIntro(false)} />
     <Box minH="100vh" bg="gray.50">
       <Box bg="green.600" color="white" shadow="md">
         <Container maxW="6xl" py={4}>
@@ -237,12 +362,11 @@ const TransitFinder = () => {
               <Icon boxSize={8}><Bus /></Icon>
               <VStack align="start" spacing={0}>
                 <Heading size="lg" fontWeight="bold">Transit Finder</Heading>
-                <Text fontSize="sm" opacity={0.9}>Discover public transit options near you</Text>
+                <Text fontSize="sm" opacity={0.9}>Discover transit reachability</Text>
               </VStack>
             </HStack>
             <HStack spacing={2}>
-              <Icon boxSize={6} opacity={0.8}><TreePine /></Icon>
-              <Text fontSize="sm" fontWeight="medium">Eco-Friendly Travel</Text>
+              <Text fontSize="sm" fontWeight="medium">AI4SAR</Text>
             </HStack>
           </Flex>
         </Container>
@@ -306,7 +430,7 @@ const TransitFinder = () => {
                 </VStack>
               )}
 
-              {error && !mapInitialized && (
+              {error && (
                 <Alert.Root status="error" borderRadius="lg">
                   <Alert.Indicator />
                   <Text>{error}</Text>
@@ -320,6 +444,7 @@ const TransitFinder = () => {
                   reachableStops={reachableStops}
                   showIsochrone={showIsochrone}
                   onStopClick={handleStopClick}
+                  onStopHover={setHoveredStopId}
                 />
               )}
 
@@ -344,11 +469,16 @@ const TransitFinder = () => {
           selectedStop={selectedStop}
           isochroneTime={isochroneTime}
           setIsochroneTime={setIsochroneTime}
-          onCalculate={calculateIsochrone}
+          onCalculate={() => handleTransitlandReachability(selectedStop, parseInt(isochroneTime))}
           loading={isochroneLoading}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          startTime={startTime}
+          setStartTime={setStartTime}
         />
       )}
     </Box>
+    </>
   );
 };
 

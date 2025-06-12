@@ -1,3 +1,4 @@
+// src/config/googleMapsService.js
 import { Loader } from '@googlemaps/js-api-loader';
 import { API_CONFIG } from '../config/apiKeys';
 
@@ -154,6 +155,24 @@ class GoogleMapsService {
     const bounds = new window.google.maps.LatLngBounds();
     locations.forEach(location => bounds.extend(location));
     this.map.fitBounds(bounds);
+  };
+
+  findNearbyPlaces(location, type, radius = 500) {
+    return new Promise((resolve, reject) => {
+      if (!this.placesService) return reject('PlacesService not initialized');
+      const request = {
+        location: new window.google.maps.LatLng(location.lat, location.lng),
+        radius,
+        type,
+      };
+      this.placesService.nearbySearch(request, (results, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          resolve(results);
+        } else {
+          resolve([]); 
+        }
+      });
+    });
   }
 }
 

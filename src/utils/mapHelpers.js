@@ -1,3 +1,4 @@
+// src/utils/mapHelpers.js
 import GoogleMapsService from '../services/googleMapsService';
 import { calculateWalkingTime } from './helpers';
 
@@ -16,13 +17,15 @@ export const clearMapMarkers = (markers, markersRef) => {
 };
 
 // Get appropriate icon for a stop
-export const getMarkerIcon = (stop, selectedStop, reachableStops, showIsochrone) => {
+export const getMarkerIcon = (stop, selectedStop, reachableStops, showIsochrone, hoveredStopId) => {
   const isSelected = selectedStop?.id === stop.id;
   const isReachable = reachableStops.some(s => s.id === stop.id);
 
-  if (isSelected) return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+  // Make orange for ALL reachable stops in isochrone mode
   if (showIsochrone && isReachable) return 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+  if (isSelected) return 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
 
+  // Default marker color for regular mode
   const color = stop.type === 'bus' ? 'blue' : stop.type === 'train' ? 'green' : 'purple';
   return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
 };

@@ -1,4 +1,4 @@
-//App.js
+// src/App.js
 import React from 'react';
 import { Box } from '@chakra-ui/react';
 import TransitFinder from './components/TransitFinder';

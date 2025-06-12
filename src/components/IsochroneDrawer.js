@@ -7,7 +7,8 @@ import {
   Button,
   Alert,
   Icon,
-  ButtonGroup
+  ButtonGroup,
+  Input,
 } from '@chakra-ui/react';
 import { Route } from 'lucide-react';
 
@@ -18,7 +19,11 @@ const IsochroneDrawer = ({
   isochroneTime,
   setIsochroneTime,
   onCalculate,
-  loading
+  loading,
+  startDate,
+  setStartDate,
+  startTime,
+  setStartTime,
 }) => {
   return (
     <Drawer.Root open={isOpen} onOpenChange={(e) => onClose(e.open)} placement="end" size="md">
@@ -39,11 +44,29 @@ const IsochroneDrawer = ({
 
           <Drawer.Body>
             <VStack gap={6} align="stretch">
+              {/* Date and time pickers */}
+              <Box>
+                <Text fontWeight="semibold" mb={1}>Date</Text>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  maxW="200px"
+                />
+                <Text fontWeight="semibold" mb={1} mt={4}>Start Time</Text>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  maxW="150px"
+                />
+              </Box>
+
               {/* Time selector using buttons */}
               <Box>
                 <Text fontWeight="semibold" mb={3}>Travel Time Limit</Text>
                 <ButtonGroup isAttached variant="outline" colorScheme="green" flexWrap="wrap">
-                  {['15', '30', '45', '60'].map((time) => (
+                  {['15', '30', '45', '60', '90', '120', '180', '240'].map((time) => (
                     <Button
                       key={time}
                       onClick={() => setIsochroneTime(time)}
@@ -65,7 +88,8 @@ const IsochroneDrawer = ({
                   <Alert.Title>How it works</Alert.Title>
                   <Text fontSize="sm" mt={2}>
                     This feature shows all transit stops you can reach within the selected time limit,
-                    including walking and waiting time estimates.
+                    including walking and waiting time estimates. The displayed arrival time for each stop
+                    is calculated by adding the travel time to your selected start time.
                   </Text>
                 </Box>
               </Alert.Root>

@@ -4,6 +4,7 @@ transit-finder/
 │   └── favicon.ico
 ├── src/
 │   ├── components/
+│   │   ├── IntroPopup.js
 │   │   ├── IsochroneControls.js
 │   │   ├── IsochroneDrawer.js
 │   │   ├── Map.js
@@ -12,8 +13,10 @@ transit-finder/
 │   │   ├── StopsList.js
 │   │   ├── TransitFinder.js
 │   ├── services/
-│   │   └── googleMapsService.js
+│   │   ├── googleMapsService.js
+│   │   └── transitlandService.js
 │   ├── utils/
+│   │   ├── ai.js
 │   │   ├── helpers.js
 │   │   └── mapHelpers.js
 │   ├── config/
@@ -21,5 +24,10 @@ transit-finder/
 │   ├── App.js
 │   └── index.js
 ├── .env
-├── .env.example
 └── package.json
+
+You’re assuming:
+
+Trip structure and timing is roughly the same between days (true for most city transit)
+
+No major disruptions or holiday schedules (which GTFS doesn’t usually expose without real-time feeds)

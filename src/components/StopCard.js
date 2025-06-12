@@ -1,4 +1,5 @@
-//StopCard.js
+// src/components/StopCard.js
+
 import React from 'react';
 import {
   Card,
@@ -16,10 +17,10 @@ import { Bus, Train, MapPin, Clock, Route } from 'lucide-react';
 import { formatDistance } from '../utils/helpers';
 import { getTransitColorScheme } from '../utils/mapHelpers';
 
-const TransitStopCard = ({ 
-  stop, 
-  isSelected, 
-  isReachable, 
+const TransitStopCard = ({
+  stop,
+  isSelected,
+  isReachable,
   showIsochrone,
   onStopClick
 }) => {
@@ -35,6 +36,30 @@ const TransitStopCard = ({
     if (isSelected) return 'red';
     if (isReachable) return 'orange';
     return stop.type === 'bus' ? 'green' : stop.type === 'train' ? 'teal' : 'purple';
+  };
+
+  // Display nearby context string
+  const renderLocationContext = () => {
+    if (!stop.locationContext) return null;
+    const nonzero = Object.entries(stop.locationContext).filter(([k, v]) => v > 0);
+    if (nonzero.length === 0) {
+      return (
+        <Text fontSize="xs" color="gray.400">
+          Nearby: Nothing notable
+        </Text>
+      );
+    }
+    return (
+      <Text fontSize="xs" color="gray.500">
+        Nearby: {
+          nonzero
+            .map(([k, v]) =>
+              `${v} ${k.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+            )
+            .join(', ')
+        }
+      </Text>
+    );
   };
 
   return (
@@ -64,6 +89,9 @@ const TransitStopCard = ({
               <Text fontWeight="semibold" color="gray.800">
                 {stop.name}
                 {isSelected && <Badge ml={2} colorScheme="red" size="sm">Origin</Badge>}
+                {stop.aiRecommended && (
+                  <Badge ml={2} colorScheme="purple" size="sm">AI Recommended</Badge>
+                )}
               </Text>
               <Text fontSize="sm" color="gray.600">{stop.address}</Text>
               {stop.rating && (
@@ -71,6 +99,18 @@ const TransitStopCard = ({
                   <Text color="yellow.600" fontSize="sm">★</Text>
                   <Text color="yellow.600" fontSize="sm">{stop.rating.toFixed(1)}</Text>
                 </HStack>
+              )}
+              {/* Arrival time */}
+              {stop.arrivalTime && (
+                <Text fontSize="sm" color="blue.700" fontWeight="semibold" mt={2}>
+                  Arrives at: {stop.arrivalTime}
+                </Text>
+              )}
+              {/* AI Location Context */}
+              {stop.locationContext && (
+                <Box mt={1}>
+                  {renderLocationContext()}
+                </Box>
               )}
             </Box>
           </HStack>
@@ -93,7 +133,7 @@ const TransitStopCard = ({
             </Text>
           </VStack>
         </Flex>
-        
+
         {stop.routes && stop.routes.length > 0 && (
           <>
             <Separator my={3} />
